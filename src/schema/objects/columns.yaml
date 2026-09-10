@@ -998,11 +998,12 @@ strain_rrid:
     of the strain of the species, for example: `RRID:IMSR_JAX:000664`.
   type: string
   format: rrid
-stream_id:
-  name: stream_id
-  display_name: Stream ID
+stream_identifier:
+  name: stream_identifier
+  display_name: Stream identifier
   description: |
-    Data stream of the recording the signal.
+    Identifier of the data stream within the data file that holds the signal,
+    for example the internal path of the neurodata object in an NWB file.
   type: string
 target_muscle:
   name: target_muscle

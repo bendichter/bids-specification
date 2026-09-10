@@ -126,7 +126,7 @@ microephysChannels:
     high_cutoff: optional
     reference__microephys: optional
     notch: optional
-    stream_id: optional
+    stream_identifier: optional
     description:
       level: optional
       description_addendum: |
