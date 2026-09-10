@@ -212,21 +212,21 @@ Channel-level filtering can be specified in multiple complementary ways:
 1.  **Cutoff frequencies**: Use `low_cutoff` (high-pass filter frequency), `high_cutoff` (low-pass filter frequency), and `notch` (notch filter frequencies) columns to specify the filter cutoff frequencies applied to each channel. These columns are consistent with the iEEG specification.
 1.  **Software filter types with Levels**: Use the `software_filter_types` column to specify which software filters were applied to each channel. The values should correspond to keys defined in the `SoftwareFilters` field of the `*_channels.json` JSON file. The `Levels` for this column SHOULD be defined there, mapping each filter type key to its description.
 
-### The `stream_id` Column
+### The `stream_identifier` Column
 
-The `stream_id` column links each channel to its corresponding data stream within the data file. The format of `stream_id` depends on the data file format:
+The `stream_identifier` column links each channel to its corresponding data stream within the data file. The format of `stream_identifier` depends on the data file format:
 
 **For NWB files (`.nwb`):**
-The `stream_id` SHOULD be the internal HDF5 path to the neurodata object (typically an `ElectricalSeries`) that contains the voltage recordings for that channel, for example `/acquisition/ElectricalSeries`.
+The `stream_identifier` SHOULD be the internal HDF5 path to the neurodata object (typically an `ElectricalSeries`) that contains the voltage recordings for that channel, for example `/acquisition/ElectricalSeries`.
 If no path is provided, it is assumed to be `/acquisition/ElectricalSeries`.
-If the directory contains multiple NWB files, and not all of those files contain data from the channel, the `stream_id` SHOULD include the filename(s) that do followed by a colon and the internal path, for example `sub-01_ses-01_run-02_ecephys.nwb:/acquisition/ElectricalSeries`.
+If the directory contains multiple NWB files, and not all of those files contain data from the channel, the `stream_identifier` SHOULD include the filename(s) that do followed by a colon and the internal path, for example `sub-01_ses-01_run-02_ecephys.nwb:/acquisition/ElectricalSeries`.
 
 **For NIX files (`.nix`):**
-The `stream_id` SHOULD reference the data array or signal within the NIX file structure that contains the recordings for that channel, following the NIX/Neo data organization.
+The `stream_identifier` SHOULD reference the data array or signal within the NIX file structure that contains the recordings for that channel, following the NIX/Neo data organization.
 
 **Multiple data streams:**
 If a single channel's data spans multiple neurodata objects within a file or across multiple files,
-the `stream_id` MUST be specified as a comma-separated list.
+the `stream_identifier` MUST be specified as a comma-separated list.
 For example: `/acquisition/ElectricalSeries1,/acquisition/ElectricalSeries2` or
 `file1.nwb:/acquisition/ElectricalSeries,file2.nwb:/acquisition/ElectricalSeries`.
 
@@ -703,11 +703,11 @@ and in this case that file is REQUIRED.
 Each recording MUST be described by one row of the `*_events.tsv` file.
 The standard `onset` and `duration` columns give the start time and duration of that recording
 relative to the start of the data file.
-The row MUST also identify the recording within the data file using the `stream_id` column,
-which follows the same conventions as the [`stream_id` column of the `*_channels.tsv` file](#the-stream_id-column):
+The row MUST also identify the recording within the data file using the `stream_identifier` column,
+which follows the same conventions as the [`stream_identifier` column of the `*_channels.tsv` file](#the-stream_identifier-column):
 for NWB files this is the internal HDF5 path of the neurodata object holding the recording,
 and for NIX files it is the corresponding block or data array.
-Rows that describe other events in the same file (for example, stimuli or behavior) MUST use `n/a` in the `stream_id` column.
+Rows that describe other events in the same file (for example, stimuli or behavior) MUST use `n/a` in the `stream_identifier` column.
 The `HED` column SHOULD be used to annotate these rows with the HED tag `Recording`,
 which makes the nature of the event explicit to tools that read the `*_events.tsv` file.
 As for any use of HED, the `HEDVersion` field SHOULD then be given in `dataset_description.json`
@@ -721,7 +721,7 @@ Example of a `*_events.tsv` describing three recordings stored in a single NWB f
 a stimulus event that occurred during the second recording:
 
 ```tsv
-onset	duration	stream_id	HED
+onset	duration	stream_identifier	HED
 0.0	120.0	/acquisition/ElectricalSeries_000	Recording
 131.2	300.0	/acquisition/ElectricalSeries_001	Recording
 250.0	0.5	n/a	Sensory-event, Auditory-presentation
