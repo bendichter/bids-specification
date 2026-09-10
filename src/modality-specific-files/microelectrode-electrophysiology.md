@@ -622,28 +622,40 @@ sidecar file, as described in the [BIDS specifications](https://bids-specificati
 
 ### Multiple recordings in a single data file (`*_events.tsv`)
 
-The `*_events.tsv` should be used to provide information about multiple parts of an acquisition
-session when the data from each of these different recordings is stored in a single data file.
-In such a case, this file is REQUIRED.
-This allows benefiting from the capability of the supported data formats (NIX and NWB) to store multiple
-recordings in a single file, which can be convenient when these recordings share numerous characteristics
-(for example, for subsequent recordings obtained on a single cell in intracellular electrophysiology).
-In such a case, each recording stored in the file MUST be described by one row of the `*_events.tsv` file,
-using the standard `onset` and `duration` columns to give the start time and duration of that recording
+The supported data formats (NIX and NWB) can store several separate recordings in a single data file.
+This is convenient when the recordings share numerous characteristics, for example subsequent sweeps
+obtained from a single cell in intracellular electrophysiology, or an extracellular acquisition that was
+paused and resumed several times within one session.
+Because BIDS otherwise assumes that each data file holds one continuous recording, the start and
+duration of every recording stored in such a file MUST be described in the `*_events.tsv` file,
+and in this case that file is REQUIRED.
+
+Each recording MUST be described by one row of the `*_events.tsv` file.
+The standard `onset` and `duration` columns give the start time and duration of that recording
 relative to the start of the data file.
-The `trial_type` column SHOULD be used to label the recording (for example, with the name of the
-recording or protocol as it appears inside the data file).
-This specification does not define any additional `*_events.tsv` columns for this purpose.
+The row MUST also identify the recording within the data file using the `stream_id` column,
+which follows the same conventions as the [`stream_id` column of the `*_channels.tsv` file](#the-stream_id-column):
+for NWB files this is the internal HDF5 path of the neurodata object holding the recording,
+and for NIX files it is the corresponding block or data array.
+Rows that describe other events in the same file (for example, stimuli or behavior) MUST use `n/a` in the `stream_id` column.
+The `HED` column SHOULD be used to annotate these rows with the HED tag `Recording`,
+which makes the nature of the event explicit to tools that read the `*_events.tsv` file.
+As for any use of HED, the `HEDVersion` field SHOULD then be given in `dataset_description.json`
+(see the [HED Appendix](../appendices/hed.md)).
+The `trial_type` column SHOULD NOT be used to label recordings, since it is reserved for the
+categorization of experimental trials.
 Further columns MAY be added, as for any `*_events.tsv` file, and SHOULD be described in the
 accompanying `*_events.json` sidecar.
 
-Example of a `*_events.tsv` describing three recordings stored in a single data file:
+Example of a `*_events.tsv` describing three recordings stored in a single NWB file, together with
+a stimulus event that occurred during the second recording:
 
 ```tsv
-onset	duration	trial_type
-0.0	120.0	baseline
-125.5	300.0	current-steps
-430.0	180.0	current-steps
+onset	duration	stream_id	HED
+0.0	120.0	/acquisition/ElectricalSeries_000	Recording
+131.2	300.0	/acquisition/ElectricalSeries_001	Recording
+250.0	0.5	n/a	Sensory-event, Auditory-presentation
+473.9	180.0	/acquisition/ElectricalSeries_002	Recording
 ```
 
 ## Microelectrode Electrophysiology Examples
