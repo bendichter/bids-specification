@@ -59,22 +59,10 @@ AgeUnits:
     - intersects([sidecar.age.Units], ["year", "month", "week", "day", "hour", "minute", "second"])
 
 # 214
+# samples.tsv is required whenever the sample entity is used in any filename.
+# Microscopy requires the entity on every file, so this also covers micr.
+# See the description of the samples file in objects/files.yaml.
 SamplesTSVMissing:
-  issue:
-    code: SAMPLES_TSV_MISSING
-    message: |
-      The compulsory file '/samples.tsv' is missing.
-      See 'Modality agnostic files' section of the BIDS specification.
-    level: error
-  selectors:
-    - path == '/dataset_description.json'
-    - '"micr" in dataset.modalities'
-  checks:
-    - exists('samples.tsv', 'dataset')
-
-# samples.tsv is required whenever the sample entity is used, not only for
-# microscopy. See the description of the samples file in objects/files.yaml.
-SamplesTSVMissingForSampleEntity:
   issue:
     code: SAMPLES_TSV_MISSING
     message: |

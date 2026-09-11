@@ -49,7 +49,8 @@ yields only a single sample, and even when the recording is made in vivo,
 because the patched cell is itself the sample.
 Requiring the entity in the single-sample case avoids having to rename files if a second sample is added later.
 Extracellular recordings are frequently made in vivo without an identifiable sample,
-so the entity is optional, but it SHOULD be used when the recording is made from a sample
+so the entity is kept optional for `ecephys` so that such datasets are not forced to define one.
+It SHOULD be used when an extracellular recording is made from a sample
 such as an acute slice or a cultured cell population.
 
 A sample corresponds to the finest granularity of biological material from which signals are measured.
