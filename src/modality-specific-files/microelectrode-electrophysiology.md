@@ -123,8 +123,8 @@ All metadata that is not directly related to one of the other metadata files (pr
 
 There should be one such JSON file for each data file.
 
-The `*_ecephys.json` or `*_icephys.json` file can be used to store any microephys-specific metadata for the dataset. All setup-related metadata should be stored in a dedicated node of the JSON file called `Setup`.
-We recommend using the following keys to describe the setup:
+The `*_ecephys.json` or `*_icephys.json` file can be used to store any microephys-specific metadata for the dataset.
+The tables below group top-level JSON keys by topic for readability only and do not imply any nesting in the file.
 
 ### Institution Information
 
@@ -138,24 +138,15 @@ We recommend using the following keys to describe the setup:
 
 {{ MACROS___make_sidecar_table("microephys.microephysProcessing") }}
 
-### Additional Procedure Information
-
-Furthermore, additional information can be stored about the recording procedure.
-We RECOMMEND to use a dedicated `Procedure` node with the following keys:
-
--   `Pharmaceuticals`
--   `Sample`
--   `Supplementary`
-
-#### Pharmaceuticals
+### Pharmaceuticals
 
 {{ MACROS___make_sidecar_table("microephys.microephysPharmaceuticals") }}
 
-#### Sample
+### Sample
 
 {{ MACROS___make_sidecar_table("microephys.microephysSample") }}
 
-#### Supplementary
+### Supplementary
 
 {{ MACROS___make_sidecar_table("microephys.microephysSupplementary") }}
 
@@ -252,21 +243,21 @@ Channel-level filtering can be specified in multiple complementary ways:
 1.  **Cutoff frequencies**: Use `low_cutoff` (high-pass filter frequency), `high_cutoff` (low-pass filter frequency), and `notch` (notch filter frequencies) columns to specify the filter cutoff frequencies applied to each channel. These columns are consistent with the iEEG specification.
 1.  **Software filter types with Levels**: Use the `software_filter_types` column to specify which software filters were applied to each channel. The values should correspond to keys defined in the `SoftwareFilters` field of the `*_channels.json` JSON file. The `Levels` for this column SHOULD be defined there, mapping each filter type key to its description.
 
-### The `stream_id` Column
+### The `stream_identifier` Column
 
-The `stream_id` column links each channel to its corresponding data stream within the data file. The format of `stream_id` depends on the data file format:
+The `stream_identifier` column links each channel to its corresponding data stream within the data file. The format of `stream_identifier` depends on the data file format:
 
 **For NWB files (`.nwb`):**
-The `stream_id` SHOULD be the internal HDF5 path to the neurodata object (typically an `ElectricalSeries`) that contains the voltage recordings for that channel, for example `/acquisition/ElectricalSeries`.
+The `stream_identifier` SHOULD be the internal HDF5 path to the neurodata object (typically an `ElectricalSeries`) that contains the voltage recordings for that channel, for example `/acquisition/ElectricalSeries`.
 If no path is provided, it is assumed to be `/acquisition/ElectricalSeries`.
-If the directory contains multiple NWB files, and not all of those files contain data from the channel, the `stream_id` SHOULD include the filename(s) that do followed by a colon and the internal path, for example `sub-01_ses-01_run-02_ecephys.nwb:/acquisition/ElectricalSeries`.
+If the directory contains multiple NWB files, and not all of those files contain data from the channel, the `stream_identifier` SHOULD include the filename(s) that do followed by a colon and the internal path, for example `sub-01_ses-01_run-02_ecephys.nwb:/acquisition/ElectricalSeries`.
 
 **For NIX files (`.nix`):**
-The `stream_id` SHOULD reference the data array or signal within the NIX file structure that contains the recordings for that channel, following the NIX/Neo data organization.
+The `stream_identifier` SHOULD reference the data array or signal within the NIX file structure that contains the recordings for that channel, following the NIX/Neo data organization.
 
 **Multiple data streams:**
 If a single channel's data spans multiple neurodata objects within a file or across multiple files,
-the `stream_id` MUST be specified as a comma-separated list.
+the `stream_identifier` MUST be specified as a comma-separated list.
 For example: `/acquisition/ElectricalSeries1,/acquisition/ElectricalSeries2` or
 `file1.nwb:/acquisition/ElectricalSeries,file2.nwb:/acquisition/ElectricalSeries`.
 
@@ -357,26 +348,96 @@ This rule is different from the electrodes.tsv table of the [iEEG modality](intr
 
 To specify electrode positions in surgical space, individual anatomical space, or a common coordinate system (such as the Allen CCF), use an additional `*_electrodes.tsv` file with a [`space-<label>`](../appendices/entities.md#space) entity. See the [`*_coordsystem.json` section](#coordinate-system-json-_coordsystemjson) for details on defining these coordinate systems.
 
+### Anatomical Location
+
+Anatomical location is described at two levels of detail.
+The `anatomical_location` column of `*_probes.tsv` names the structure in which the probe as a whole
+is placed, which for a probe spanning several structures MUST be a structure containing all of them,
+and may be as coarse as `brain` or a single hemisphere.
+The `anatomical_location` column of `*_electrodes.tsv` names the structure in which an individual
+recording site is located, and is where a per-contact localization belongs.
+Only the electrode-level column can describe a probe that passes through several structures,
+which is common for long shank probes.
+
+Terms may be taken from a species-independent ontology such as [Uberon](https://obophenotype.github.io/uberon/) or from a species-specific
+atlas or ontology such as the [Mouse Brain Atlas Ontology](https://www.ebi.ac.uk/ols4/ontologies/mba), and a species-specific is often the better choice.
+The source the terms come from SHOULD be documented in the sidecar file, in the way BIDS
+documents any other tabular column, as described in
+[Tabular files](../common-principles.md#tabular-files).
+Where the individual terms resolve, give each one its own `TermURL` under `Levels`.
+Where they do not, name the atlas in the `ReferenceAtlas` field of the sidecar.
+
+The method used to determine the location SHOULD be recorded.
+Where it differs between recording sites, use the `localization_method` column of
+`*_electrodes.tsv`.
+Where the same method applies to every electrode in the file, it MAY be given once in the
+`LocalizationMethod` field of the corresponding `*_electrodes.json` file instead,
+but it MUST NOT be given in both places.
+
+{{ MACROS___make_sidecar_table("microephys.microephysElectrodeLocalization") }}
+
+In the following `*_electrodes.json` example the atlas resolves its individual structures,
+so each term used in the table is given its own `TermURL`:
+
+```JSON
+{
+  "anatomical_location": {
+    "Description": "Structure the electrode is located in, from the Allen Mouse Brain Atlas",
+    "Levels": {
+      "MOp": {
+        "Description": "Primary motor area",
+        "TermURL": "https://atlas.brain-map.org/atlas?atlas=602630314#structure=985"
+      },
+      "CA1": {
+        "Description": "Field CA1",
+        "TermURL": "https://atlas.brain-map.org/atlas?atlas=602630314#structure=382"
+      }
+    }
+  },
+  "LocalizationMethod": "histology",
+  "ReferenceAtlas": "Allen Mouse Brain Common Coordinate Framework v3"
+}
+```
+
+In the next example the atlas publishes region names but nothing to resolve them to,
+so there are no `TermURL` values to give and `ReferenceAtlas` is what makes the names
+in `anatomical_location` interpretable:
+
+```JSON
+{
+  "LocalizationMethod": "stereotaxic coordinates",
+  "ReferenceAtlas": "D99 macaque atlas v2.0"
+}
+```
+
+In both examples the localization method is given once in the sidecar because it is the same
+for every electrode in the file.
+
+Because a dataset may contain more than one `*_electrodes.tsv` file for the same recording,
+distinguished by the [`space-<label>`](../appendices/entities.md#space) entity,
+localizations produced by different atlases or different methods can be provided alongside one another,
+each with its own `ReferenceAtlas` and `LocalizationMethod`.
+
 ### Example `*_electrodes.tsv`
 
 **Extracellular electrophysiology example (probe-relative coordinates):**
 
 ```tsv
-name	probe_name	hemisphere	x	y	z	impedance	shank_id	size	material	location
-e001	probe01	L	0	0	0	1.2	0	15	iridium-oxide	MOp
-e002	probe01	L	0	0	25	1.1	0	15	iridium-oxide	MOp
-e003	probe01	L	0	0	50	1.3	0	15	iridium-oxide	MOp
-e004	probe01	L	0	0	75	1.4	0	15	iridium-oxide	MOp
-e005	probe02	R	0	0	0	2.1	n/a	12	tungsten	CA1
-e006	probe02	R	0	0	15	2.3	n/a	12	tungsten	CA1
-e007	probe02	R	0	0	30	1.9	n/a	12	tungsten	CA1
-e008	probe02	R	0	0	45	2.0	n/a	12	tungsten	CA1
+name	probe_name	hemisphere	x	y	z	impedance	shank_id	size	material	anatomical_location	localization_method
+e001	probe01	L	0	0	0	1.2	0	15	iridium-oxide	MOp	histology
+e002	probe01	L	0	0	25	1.1	0	15	iridium-oxide	MOp	histology
+e003	probe01	L	0	0	50	1.3	0	15	iridium-oxide	MOp	histology
+e004	probe01	L	0	0	75	1.4	0	15	iridium-oxide	MOp	histology
+e005	probe02	R	0	0	0	2.1	n/a	12	tungsten	CA1	histology
+e006	probe02	R	0	0	15	2.3	n/a	12	tungsten	CA1	histology
+e007	probe02	R	0	0	30	1.9	n/a	12	tungsten	CA1	histology
+e008	probe02	R	0	0	45	2.0	n/a	12	tungsten	CA1	histology
 ```
 
 **Intracellular electrophysiology example:**
 
 ```tsv
-name	probe_name	hemisphere	x	y	z	impedance	pipette_solution	internal_pipette_diameter	external_pipette_diameter	material	location
+name	probe_name	hemisphere	x	y	z	impedance	pipette_solution	internal_pipette_diameter	external_pipette_diameter	material	anatomical_location
 patch01	pipette01	L	0	0	0	5.2	K-gluconate	1.5	2.5	borosilicate-glass	VISp2/3
 patch02	pipette02	R	0	0	0	4.8	K-gluconate	1.5	2.5	borosilicate-glass	VISp2/3
 sharp01	pipette03	L	0	0	0	80	3M KCl	0.5	1.0	borosilicate-glass	PL5
@@ -396,18 +457,18 @@ This file contains the probe ID, the type of recording (acute/chronic), and the 
 **Extracellular electrophysiology example:**
 
 ```tsv
-probe_name	type	AP	ML	DV	AP_angle	ML_angle	rotation_angle	hemisphere	manufacturer	device_serial_number	electrode_count	width	height	depth	coordinate_reference_point	anatomical_reference_point	associated_brain_region	associated_brain_region_id	reference_atlas	material
-probe01	silicon-probe	-2.5	1.5	-4.0	15	0	0	L	IMEC	NP1100-2205	384	70	20	10	tip	Bregma	Primary Motor Cortex	MOp	Franklin-Paxinos	silicon
-probe02	tetrode	-1.2	-2.1	-3.5	0	10	45	R	Neuralynx	TT-12345	4	n/a	n/a	n/a	tip	Bregma	Hippocampus CA1	CA1	Paxinos-Watson	tungsten
+probe_name	type	AP	ML	DV	AP_angle	ML_angle	rotation_angle	hemisphere	manufacturer	device_serial_number	electrode_count	width	height	depth	coordinate_reference_point	anatomical_reference_point	anatomical_location	material
+probe01	silicon-probe	-2.5	1.5	-4.0	15	0	0	L	IMEC	NP1100-2205	384	70	20	10	tip	Bregma	isocortex	silicon
+probe02	tetrode	-1.2	-2.1	-3.5	0	10	45	R	Neuralynx	TT-12345	4	n/a	n/a	n/a	tip	Bregma	CA1	tungsten
 ```
 
 **Intracellular electrophysiology example:**
 
 ```tsv
-probe_name	type	AP	ML	DV	AP_angle	ML_angle	rotation_angle	hemisphere	manufacturer	electrode_count	coordinate_reference_point	anatomical_reference_point	associated_brain_region	associated_brain_region_id	reference_atlas
-pipette01	patch-pipette	-1.8	0.5	-2.2	30	0	0	L	Sutter	1	tip	Bregma	Visual Cortex Layer 2/3	VISp2/3	AllenCCFv3
-pipette02	patch-pipette	-1.8	-0.5	-2.2	30	0	0	R	Sutter	1	tip	Bregma	Visual Cortex Layer 2/3	VISp2/3	AllenCCFv3
-pipette03	sharp-electrode	-3.2	1.2	-3.8	20	5	0	L	WPI	1	tip	Bregma	Prefrontal Cortex Layer 5	PL5	Franklin-Paxinos
+probe_name	type	AP	ML	DV	AP_angle	ML_angle	rotation_angle	hemisphere	manufacturer	electrode_count	coordinate_reference_point	anatomical_reference_point	anatomical_location
+pipette01	patch-pipette	-1.8	0.5	-2.2	30	0	0	L	Sutter	1	tip	Bregma	VISp2/3
+pipette02	patch-pipette	-1.8	-0.5	-2.2	30	0	0	R	Sutter	1	tip	Bregma	VISp2/3
+pipette03	sharp-electrode	-3.2	1.2	-3.8	20	5	0	L	WPI	1	tip	Bregma	PL5
 ```
 
 For details on the surgical coordinate system used to describe probe placement during surgery (AP, ML, DV, angles, and
@@ -662,18 +723,41 @@ sidecar file, as described in the [BIDS specifications](https://bids-specificati
 
 ### Multiple recordings in a single data file (`*_events.tsv`)
 
-The `*_events.tsv` should be used to provide information about multiple parts of an acquisition
-session when the data from each of these different recordings is stored in a single data file.
-In such a case, this file is REQUIRED.
-This allows benefiting from the capability of the supported data formats (NIX and NWB) to store multiple
-recordings in a single file, which can be convenient when these recordings share numerous characteristics
-(for example, for subsequent recordings obtained on a single cell in intracellular electrophysiology).
-In such case, the information about these recordings should be stored in columns added in the
-`*_events.tsv` file, which are listed now.
+The supported data formats (NIX and NWB) can store several separate recordings in a single data file.
+This is convenient when the recordings share numerous characteristics, for example subsequent sweeps
+obtained from a single cell in intracellular electrophysiology, or an extracellular acquisition that was
+paused and resumed several times within one session.
+Because BIDS otherwise assumes that each data file holds one continuous recording, the start and
+duration of every recording stored in such a file MUST be described in the `*_events.tsv` file,
+and in this case that file is REQUIRED.
 
-Optional column names in `events.tsv` to support multiple recordings in a single data file:
+Each recording MUST be described by one row of the `*_events.tsv` file.
+The standard `onset` and `duration` columns give the start time and duration of that recording
+relative to the start of the data file.
+The row MUST also identify the recording within the data file using the `stream_identifier` column,
+which follows the same conventions as the [`stream_identifier` column of the `*_channels.tsv` file](#the-stream_identifier-column):
+for NWB files this is the internal HDF5 path of the neurodata object holding the recording,
+and for NIX files it is the corresponding block or data array.
+Rows that describe other events in the same file (for example, stimuli or behavior) MUST use `n/a` in the `stream_identifier` column.
+The `HED` column SHOULD be used to annotate these rows with the HED tag `Recording`,
+which makes the nature of the event explicit to tools that read the `*_events.tsv` file.
+As for any use of HED, the `HEDVersion` field SHOULD then be given in `dataset_description.json`
+(see the [HED Appendix](../appendices/hed.md)).
+The `trial_type` column SHOULD NOT be used to label recordings, since it is reserved for the
+categorization of experimental trials.
+Further columns MAY be added, as for any `*_events.tsv` file, and SHOULD be described in the
+accompanying `*_events.json` sidecar.
 
-<!-- TODO: Macro for events -->
+Example of a `*_events.tsv` describing three recordings stored in a single NWB file, together with
+a stimulus event that occurred during the second recording:
+
+```tsv
+onset	duration	stream_identifier	HED
+0.0	120.0	/acquisition/ElectricalSeries_000	Recording
+131.2	300.0	/acquisition/ElectricalSeries_001	Recording
+250.0	0.5	n/a	Sensory-event, Auditory-presentation
+473.9	180.0	/acquisition/ElectricalSeries_002	Recording
+```
 
 ## Microelectrode Electrophysiology Examples
 
@@ -933,14 +1017,22 @@ Example `sub-20220101B_sample-cell002_task-IVcurve_icephys.json`:
 }
 ```
 
-This toy data set can be found in [this repository,](https://gin.g-node.org/NeuralEnsemble/BEP032-examples/src/master/toy-dataset_patchclamp_single-record-per-file) with the content of the metadata files. The other option available to organize such data consists in storing several recordings in a single data file (as described in 3.8.2); the same data set is presented using this latter option in [this other repository](https://gin.g-node.org/NeuralEnsemble/BEP032-examples/src/master/toy-dataset_patchclamp_multiple-records-per-file), so that both options can be compared for the same data set.
+The other option available to organize such data consists in storing several recordings in a single data file,
+as described in [Multiple recordings in a single data file](#multiple-recordings-in-a-single-data-file-_eventstsv).
 
 ## Examples of Real Datasets
 
-Several real-world datasets have been formatted using this specification and can be used for practical guidance when curating a new dataset.
-<!-- TODO: Update with current real datasets. A current version of these datasets [can be found on GIN](https://gin.g-node.org/NeuralEnsemble/BEP032-examples) .
+Example datasets formatted according to this specification are maintained in the
+[bids-examples](https://github.com/bids-standard/bids-examples) repository and can be used
+for practical guidance when curating a new dataset:
 
-For a complete dataset including all data samples the extracellular microelectrode dataset published in [Brochier (2018)](https://doi.org/10.1038/sdata.2018.55) has been reorganized according to the current version of this BEP, using the NIX data format.
-The up-to-date version of the dataset [can be found on GIN](https://gin.g-node.org/sprenger/multielectrode_grasp/src/bep_animalephys) .
+-   [`microephys_toy`](https://github.com/bids-standard/bids-examples/tree/master/microephys_toy):
+    the toy extracellular and intracellular datasets described above.
+-   [`microephys_ecephys_multielectrode_grasp`](https://github.com/bids-standard/bids-examples/tree/master/microephys_ecephys_multielectrode_grasp):
+    the extracellular multielectrode array dataset published in
+    [Brochier (2018)](https://doi.org/10.1038/sdata.2018.55), reorganized according to this specification
+    using the NIX data format.
 
-We will also publish another dataset using the NWB data format in the near future, and a dataset acquired -->
+Further real-world datasets are being organized according to this specification in the
+[bids-dandisets](https://github.com/bids-dandisets) project, which mirrors datasets from the
+[DANDI Archive](https://dandiarchive.org) in BIDS layout.
